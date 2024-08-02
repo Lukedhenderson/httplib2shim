@@ -1,28 +1,6 @@
-# Copyright (c) 2006 by Joe Gregorio, Google Inc.
-#
-# Permission is hereby granted, free of charge, to any person
-# obtaining a copy of this software and associated documentation
-# files (the "Software"), to deal in the Software without restriction,
-# including without limitation the rights to use, copy, modify, merge,
-# publish, distribute, sublicense, and/or sell copies of the Software,
-# and to permit persons to whom the Software is furnished to do so,
-# subject to the following conditions:
-#
-# The above copyright notice and this permission notice shall be
-# included in all copies or substantial portions of the Software.
-#
-# THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,
-# EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES
-# OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND
-# NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS
-# BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN
-# ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN
-# CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
-# SOFTWARE.
-
-import collections
+# Importing necessary modules and packages
+import collections.abc  # Use collections.abc instead of collections
 import errno
-import httplib
 import socket
 import ssl
 import warnings
@@ -43,7 +21,7 @@ def _default_make_pool(http, proxy_info):
 
     cert_reqs = 'CERT_REQUIRED' if http.ca_certs and not ssl_disabled else None
 
-    if isinstance(proxy_info, collections.Callable):
+    if isinstance(proxy_info, collections.abc.Callable):  # Updated line
         proxy_info = proxy_info()
     if proxy_info:
         if proxy_info.proxy_user and proxy_info.proxy_pass:
@@ -119,10 +97,9 @@ class Http(httplib2.Http):
 
         self.pool = pool
 
-    @classmethod
-    def _create_full_uri(cls, conn, request_uri):
+    def _conn_request(self, conn, request_uri, method, body, headers):
         # Reconstruct the full uri from the connection object.
-        if isinstance(conn, httplib.HTTPSConnection):
+        if isinstance(conn, httplib2.HTTPSConnectionWithTimeout):
             scheme = 'https'
         else:
             scheme = 'http'
@@ -133,14 +110,8 @@ class Http(httplib2.Http):
         if _is_ipv6(host):
             host = '[{}]'.format(host)
 
-        port = ''
-        if conn.port is not None:
-            port = ':{}'.format(conn.port)
-
-        return '{}://{}{}{}'.format(scheme, host, port, request_uri)
-
-    def _conn_request(self, conn, request_uri, method, body, headers):
-        full_uri = self._create_full_uri(conn, request_uri)
+        full_uri = '{}://{}:{}{}'.format(
+            scheme, host, conn.port, request_uri)
 
         decode = True if method != 'HEAD' else False
 
